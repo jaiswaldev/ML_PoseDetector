@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Camera Window</title>
+    <link href="/src/output.css" rel="stylesheet" />
+  </head>
+  <body class="m-0 flex justify-center items-center h-[100vh] bg-[#f0f0f0] relative">
+   
+    <video id="video" autoplay playsinline muted class="absolute top-0 left-0 w-full h-full object-cover"></video>
+    <canvas id="outputCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+
+    <script>
+      const API_URL = "http://127.0.0.1:5000/pose";
+
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("outputCanvas");
+      const context = canvas.getContext("2d");
+
+      async function startVideo() {
+        try {
+         
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+
+         
+          video.onloadedmetadata = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            detectPose(); 
+          };
+        } catch (error) {
+          console.error("Error accessing webcam:", error);
+          alert("Webcam access is required.");
+        }
+      }
+
+      async function detectPose() {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+         
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+         
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+          const base64Image = dataUrl.split(",")[1];
+
+          try {
+            
+            const response = await fetch(API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: base64Image }),
+            });
+
+            if (!response.ok) throw new Error("API response was not ok");
+
+            const result = await response.json();
+            if (result.image) {
+             
+              const img = new Image();
+              img.src = `data:image/jpeg;base64,${result.image}`;
+              img.onload = () => {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(img, 0, 0, canvas.width, canvas.height);
+              };
+            }
+          } catch (error) {
+            console.error("Pose detection error:", error);
+          }
+        }
+
+       
+        requestAnimationFrame(detectPose);
+      }
+
+     
+      window.onload = startVideo;
+    </script>
+  </body>
+</html>
