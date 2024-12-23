@@ -4,7 +4,7 @@
 
     "tailwind": "npx tailwindcss -i ./src/input.css -o ./src/output.css --watch",
 
-    "flask": "flask run",
+    "flask": "flask --app backend/app.py run",
 
     "dev": "concurrently \"npm run tailwind\" \"npm run flask\""
 
